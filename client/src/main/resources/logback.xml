@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>
+                [%cyan(%d{yyyy-MM-dd HH:mm:ss.SSS})] [%highlight(%p)] [%yellow(%t)] [%magenta(%C{1})] [%magenta(%M)] - %highlight(%m) %n%rootException{
+                full,
+                java.lang.reflect.Method,
+                org.apache.catalina,
+                org.apache.tomcat,
+                org.springframework.aop,
+                org.springframework.security,
+                org.springframework.transaction,
+                org.springframework.web,
+                sun.reflect,
+                net.sf.cglib,
+                ByCGLIB
+                }
+            </Pattern>
+        </encoder>
+    </appender>
+
+    <!-- LOG everything at INFO level -->
+    <root level="error">
+        <appender-ref ref="Console"/>
+    </root>
+
+    <logger name="org.catplayer" level="debug" additivity="false">
+        <appender-ref ref="Console"/>
+    </logger>
+    <logger name="io.netty" level="debug" additivity="false">
+        <appender-ref ref="Console"/>
+    </logger>
+</configuration>
