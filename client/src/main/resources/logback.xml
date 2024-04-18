@@ -3,7 +3,7 @@
     <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <Pattern>
-                [%cyan(%d{yyyy-MM-dd HH:mm:ss.SSS})] [%highlight(%p)] [%yellow(%t)] [%magenta(%C{1})] [%magenta(%M)] - %highlight(%m) %n%rootException{
+                [%d{yyyy-MM-dd HH:mm:ss.SSS}] [%p] [%t] [%C{1}] [%M] - %m %n%rootException{
                 full,
                 java.lang.reflect.Method,
                 org.apache.catalina,

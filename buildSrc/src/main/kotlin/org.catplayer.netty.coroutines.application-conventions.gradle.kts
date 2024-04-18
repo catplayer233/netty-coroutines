@@ -15,3 +15,15 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.5")
 
 }
+
+application {
+    applicationDefaultJvmArgs = listOf(
+        "--add-opens",
+        "java.base/jdk.internal.misc=ALL-UNNAMED",
+        "--add-opens",
+        "java.base/java.lang=ALL-UNNAMED",
+        "-Dio.netty.tryReflectionSetAccessible=true",
+        "--add-opens",
+        "java.base/java.nio=ALL-UNNAMED"
+    )
+}
