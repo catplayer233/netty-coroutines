@@ -10,7 +10,7 @@ import kotlin.coroutines.suspendCoroutine
 suspend inline fun <reified T : Any> ChannelOutboundInvoker.writeSuspend(messageAction: MessageAction<T>, msg: T) {
     val message = Message(messageAction.code, businessJSON.encodeToString(serializer(), msg))
 
-    val channelFuture = write(message)
+    val channelFuture = writeAndFlush(message)
 
     if (channelFuture.isDone) {
         return

@@ -6,15 +6,27 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder
 import io.netty.handler.codec.MessageToMessageDecoder
 import kotlinx.serialization.serializer
+import java.io.ByteArrayOutputStream
 
 @Sharable
 object MessageDecoder : MessageToMessageDecoder<ByteBuf>() {
 
     override fun decode(ctx: ChannelHandlerContext, msg: ByteBuf, out: MutableList<Any>) {
+        val jsonBytesSize = msg.readInt()
 
-        val bytes = msg.array()
+        check(jsonBytesSize > 0) {
+            "json message can't be empty"
+        }
 
-        val message = businessJSON.decodeFromString<Message>(String(bytes))
+        val jsonBytes = ByteArrayOutputStream(jsonBytesSize)
+            .use {
+                msg.readBytes(it, jsonBytesSize)
+
+                it.toByteArray()
+            }
+
+
+        val message = businessJSON.decodeFromString<Message>(String(jsonBytes))
 
         out.add(message)
     }

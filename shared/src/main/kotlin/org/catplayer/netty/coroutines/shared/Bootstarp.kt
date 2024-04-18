@@ -31,13 +31,13 @@ fun bootstrap4Server(
 
                 //read staff
                 ch.pipeline().addLast(
-                    LengthFieldBasedFrameDecoder(4.kb, 0, 4, 0, 4),
+                    LengthFieldBasedFrameDecoder(4.kb, 0, 4, 0, 0),
                     MessageDecoder,
                     MessageHandlerDispatcherBuilder.build { route(this) },
                 )
 
                 //write staff
-                ch.pipeline().addLast(MessageEncoder)
+                ch.pipeline().addFirst(MessageEncoder)
             }
         })
         .bind(port)
@@ -64,7 +64,7 @@ fun bootstrap4Client(
             override fun initChannel(ch: SocketChannel) {
                 //read staff
                 ch.pipeline().addLast(
-                    LengthFieldBasedFrameDecoder(4.kb, 0, 4, 0, 4),
+                    LengthFieldBasedFrameDecoder(4.kb, 0, 4, 0, 0),
                     MessageDecoder,
                     MessageHandlerDispatcherBuilder.build { route(this) },
                 )

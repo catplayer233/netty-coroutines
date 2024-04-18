@@ -2,7 +2,10 @@ package org.catplayer.netty.coroutines.shared
 
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
 import org.slf4j.Logger
@@ -11,20 +14,20 @@ import kotlin.reflect.KClass
 class MessageHandlerDispatcher(private val actions: Map<Int, ActionHandlerContainer<*>>) :
     SimpleChannelInboundHandler<Message>() {
 
+    private val handlerExecutionCoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
     override fun channelRead0(ctx: ChannelHandlerContext, msg: Message) {
         val actionCode = msg.action
         val handler = actions[actionCode] ?: error("unsupported action code [$actionCode]")
 
-        runBlocking {
+        handlerExecutionCoroutineScope.launch {
             handler.handle(ctx, msg.detail ?: "{}")
         }
-
     }
-
 }
 
 data class ActionHandlerContainer<T : Any>(
-    private val type: KClass<*>,
+    private val type: KClass<T>,
     private val handler: suspend ChannelHandlerContext.(T) -> Unit
 ) {
 
@@ -41,7 +44,7 @@ data class ActionHandlerContainer<T : Any>(
 }
 
 @MessageDsl
-class MessageHandlerDispatcherBuilder() {
+class MessageHandlerDispatcherBuilder {
 
     private val actions: MutableMap<Int, ActionHandlerContainer<*>> = hashMapOf()
 

@@ -2,18 +2,23 @@ package org.catplayer.netty.coroutines.shared
 
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
-import kotlin.reflect.full.superclasses
-import kotlin.reflect.jvm.jvmErasure
 
 @Serializable
 data class Message(val action: Int, val detail: String?)
 
-abstract class MessageAction<T>(val code: Int) {
+interface MessageAction<T : Any> {
 
-    val type: KClass<*> = this::class.superclasses[0].typeParameters[0].upperBounds[0].jvmErasure
+    val code: Int
 
-    override fun toString(): String {
-        return "MessageAction(code=$code, type=$type)"
+    val type: KClass<T>
+}
+
+inline fun <reified T : Any> MessageAction(code: Int): MessageAction<T> {
+    return object : MessageAction<T> {
+        override val code: Int
+            get() = code
+        override val type: KClass<T>
+            get() = T::class
     }
 }
 
@@ -22,10 +27,10 @@ abstract class MessageAction<T>(val code: Int) {
 
 @Serializable
 data class Ping(val name: String) {
-    companion object : MessageAction<Ping>(1)
+    companion object : MessageAction<Ping> by MessageAction(1)
 }
 
 @Serializable
 data class Pong(val welcome: String) {
-    companion object : MessageAction<Pong>(2)
+    companion object : MessageAction<Pong> by MessageAction(2)
 }
