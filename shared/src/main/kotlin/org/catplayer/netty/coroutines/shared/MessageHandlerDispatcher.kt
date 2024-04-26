@@ -3,24 +3,38 @@ package org.catplayer.netty.coroutines.shared
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
 import org.slf4j.Logger
 import kotlin.reflect.KClass
 
+/**
+ * message handle dispatcher, we use kotlin coroutines,
+ *
+ * here we should make sure message handle logic should be executed in target channel's event loop executor orderly
+ */
 class MessageHandlerDispatcher(private val actions: Map<Int, ActionHandlerContainer<*>>) :
     SimpleChannelInboundHandler<Message>() {
 
-    private val handlerExecutionCoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private lateinit var handlerExecutionCoroutineScope: CoroutineScope
+
+    private val mutex: Mutex = Mutex()
+
+    override fun channelRegistered(ctx: ChannelHandlerContext) {
+        val channel = ctx.channel()
+        handlerExecutionCoroutineScope = CoroutineScope(SupervisorJob() + channel.eventLoop().asCoroutineDispatcher())
+
+    }
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: Message) {
         val actionCode = msg.action
         val handler = actions[actionCode] ?: error("unsupported action code [$actionCode]")
 
-        handlerExecutionCoroutineScope.launch {
+        runBlocking {
             handler.handle(ctx, msg.detail ?: "{}")
         }
     }

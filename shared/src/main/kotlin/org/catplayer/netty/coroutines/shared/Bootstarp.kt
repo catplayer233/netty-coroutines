@@ -70,7 +70,7 @@ fun bootstrap4Client(
                 )
 
                 //write staff
-                ch.pipeline().addLast(MessageEncoder)
+                ch.pipeline().addFirst(MessageEncoder)
             }
         })
         .connect(host, port)

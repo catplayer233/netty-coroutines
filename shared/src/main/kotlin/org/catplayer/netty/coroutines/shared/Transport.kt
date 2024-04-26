@@ -1,14 +1,16 @@
 package org.catplayer.netty.coroutines.shared
 
+import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelOutboundInvoker
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.serializer
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 
-suspend inline fun <reified T : Any> ChannelOutboundInvoker.writeSuspend(messageAction: MessageAction<T>, msg: T) {
-    val message = Message(messageAction.code, businessJSON.encodeToString(serializer(), msg))
+suspend inline fun <reified T : Any> ChannelOutboundInvoker.writeAndFlushSuspend(
+    messageAction: MessageAction<T>,
+    contentProvider: () -> T
+) {
+    val message = Message(messageAction.code, businessJSON.encodeToString(serializer(), contentProvider()))
 
     val channelFuture = writeAndFlush(message)
 
@@ -16,25 +18,31 @@ suspend inline fun <reified T : Any> ChannelOutboundInvoker.writeSuspend(message
         return
     }
 
-    suspendCoroutine { continuation ->
+    //the writing not finished, we suspend current continuation
+    suspendCancellableCoroutine { continuation ->
+
+        val resumeByChannelFutureResult: ChannelFuture.() -> Unit = {
+            val error = cause()
+            val result = if (error != null) {
+                Result.failure(error)
+            } else {
+                Result.success(Unit)
+            }
+
+            continuation.resumeWith(result)
+        }
+
+        //check before we add hooks for channelFuture
         if (channelFuture.isDone) {
-            val cause = channelFuture.cause()
-            if (cause != null) {
-                continuation.resumeWithException(cause)
-            } else {
-                continuation.resume(Unit)
-            }
-
-            return@suspendCoroutine
+            channelFuture.resumeByChannelFutureResult()
+            return@suspendCancellableCoroutine
         }
 
+        //add hook when the future finished
         channelFuture.addListener {
-            val cause = it.cause()
-            if (cause != null) {
-                continuation.resumeWithException(cause)
-            } else {
-                continuation.resume(Unit)
-            }
+            channelFuture.resumeByChannelFutureResult()
         }
+
+        continuation.invokeOnCancellation { channelFuture.cancel(false) }
     }
 }
