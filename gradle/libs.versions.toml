@@ -2,11 +2,12 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml-dependencies-format
 
 [versions]
-kotlin = "2.0.0-RC1"
-netty = "4.1.108.Final"
-coroutines = "1.8.1-Beta"
+kotlin = "2.0.0"
+netty = "4.1.111.Final"
+coroutines = "1.8.1"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 netty-all = { module = "io.netty:netty-all", version.ref = "netty" }
 kotlin-serialization-plugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
+power-assert-plugin = { module = "org.jetbrains.kotlin:kotlin-power-assert", version.ref = "kotlin" }

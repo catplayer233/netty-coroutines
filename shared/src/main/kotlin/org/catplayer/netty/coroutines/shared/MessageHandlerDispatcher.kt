@@ -6,34 +6,33 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
-import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 
 /**
  * message handle dispatcher, we use kotlin coroutines,
  *
  * here we should make sure message handle logic should be executed in target channel's event loop executor orderly
+ *
  */
 class MessageHandlerDispatcher(private val actions: Map<Int, ActionHandlerContainer<*>>) :
     SimpleChannelInboundHandler<Message>() {
 
     private lateinit var handlerExecutionCoroutineScope: CoroutineScope
 
-    private val mutex: Mutex = Mutex()
-
-    override fun channelRegistered(ctx: ChannelHandlerContext) {
+    override fun channelActive(ctx: ChannelHandlerContext) {
         val channel = ctx.channel()
         handlerExecutionCoroutineScope = CoroutineScope(SupervisorJob() + channel.eventLoop().asCoroutineDispatcher())
-
+        super.channelActive(ctx)
     }
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: Message) {
         val actionCode = msg.action
         val handler = actions[actionCode] ?: error("unsupported action code [$actionCode]")
 
+        //fixme: design a special coroutine context
         runBlocking {
             handler.handle(ctx, msg.detail ?: "{}")
         }
@@ -64,11 +63,13 @@ class MessageHandlerDispatcherBuilder {
 
     fun <T : Any> register(messageAction: MessageAction<T>, handler: suspend ChannelHandlerContext.(T) -> Unit) {
         val code = messageAction.code
-        actions[code]?.also { warn("already registered: [$code]") }
+        actions[code]?.also { LOGGER.warn("already registered: [$code]") }
         actions[code] = ActionHandlerContainer(messageAction.type, handler)
     }
 
-    companion object : Logger by Logger<MessageHandlerDispatcher>() {
+    companion object {
+
+        private val LOGGER = LoggerFactory.getLogger(MessageHandlerDispatcherBuilder::class.java)
 
         @MessageDsl
         fun build(block: MessageHandlerDispatcherBuilder.(MessageHandlerDispatcherBuilder) -> Unit): MessageHandlerDispatcher {

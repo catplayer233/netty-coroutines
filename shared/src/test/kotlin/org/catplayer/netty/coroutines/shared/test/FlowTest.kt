@@ -3,8 +3,7 @@ package org.catplayer.netty.coroutines.shared.test
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import org.catplayer.netty.coroutines.shared.Logger
-import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.test.Test
 
 class FlowTest {
@@ -15,12 +14,14 @@ class FlowTest {
         runBlocking {
             flowOf(1, 2, 3, 4, 5).collect {
                 delay(1000)
-                info("value: [{}]", it)
+                LOGGER.info("value: [{}]", it)
             }
         }
 
     }
 
 
-    companion object : Logger by Logger<FlowTest>()
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger(FlowTest::class.java)
+    }
 }
