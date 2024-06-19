@@ -3,12 +3,14 @@ package org.catplayer.netty.coroutines.shared
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.serializer
 import org.slf4j.LoggerFactory
+import kotlin.collections.ArrayDeque
 import kotlin.reflect.KClass
 
 /**
@@ -20,22 +22,48 @@ import kotlin.reflect.KClass
 class MessageHandlerDispatcher(private val actions: Map<Int, ActionHandlerContainer<*>>) :
     SimpleChannelInboundHandler<Message>() {
 
-    private lateinit var handlerExecutionCoroutineScope: CoroutineScope
+    private val messageJobs = ArrayDeque<Job>()
+
+    private var currentJob: Job? = null
+
+    private lateinit var executeScope: CoroutineScope
 
     override fun channelActive(ctx: ChannelHandlerContext) {
-        val channel = ctx.channel()
-        handlerExecutionCoroutineScope = CoroutineScope(SupervisorJob() + channel.eventLoop().asCoroutineDispatcher())
+        executeScope = CoroutineScope(SupervisorJob() + NettyChannelDispatcher(ctx.channel()))
         super.channelActive(ctx)
     }
 
     override fun channelRead0(ctx: ChannelHandlerContext, msg: Message) {
         val actionCode = msg.action
         val handler = actions[actionCode] ?: error("unsupported action code [$actionCode]")
-
-        //fixme: design a special coroutine context
-        runBlocking {
+        executeScope.launch(start = CoroutineStart.LAZY) {
             handler.handle(ctx, msg.detail ?: "{}")
         }
+            .also {
+                it.invokeOnCompletion {
+                    currentJob = null
+                    tryStartJob()
+                }
+
+                messageJobs.add(it)
+            }
+
+        tryStartJob()
+    }
+
+    private fun tryStartJob() {
+        //job is null or job already finished
+        if (currentJob?.isCompleted != false) {
+            val job = messageJobs.removeFirstOrNull() ?: return
+            currentJob = job
+            job.start()
+        }
+    }
+
+    override fun channelInactive(ctx: ChannelHandlerContext) {
+        executeScope.coroutineContext[Job]?.cancel()
+        messageJobs.clear()
+        super.channelInactive(ctx)
     }
 }
 
