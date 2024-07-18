@@ -11,6 +11,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.kotlin.plugin.power-assert")
+    id("org.jetbrains.kotlinx.atomicfu")
 }
 
 repositories {
@@ -46,6 +47,9 @@ java {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+atomicfu {
+    transformJvm = false
 }
 
 powerAssert {

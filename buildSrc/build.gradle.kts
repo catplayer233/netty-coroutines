@@ -16,4 +16,5 @@ dependencies {
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.kotlin.serialization.plugin)
     implementation(libs.power.assert.plugin)
+    implementation(libs.kotlinx.atomicfu.plugin)
 }
